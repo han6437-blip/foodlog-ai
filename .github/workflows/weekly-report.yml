@@ -1,0 +1,15 @@
+name: Generate Weekly Report
+
+on:
+  schedule:
+    - cron: "0 14 * * 0"
+  workflow_dispatch:
+
+jobs:
+  call-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call weekly report API
+        run: |
+          curl -X POST "${{ secrets.API_BASE_URL }}/api/report/weekly-generate" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
