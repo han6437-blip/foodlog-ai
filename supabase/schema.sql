@@ -24,6 +24,8 @@ create table if not exists user_profile (
   updated_at timestamp default now()
 );
 
+alter table user_profile enable row level security;
+
 create table if not exists meal_record (
   id uuid primary key default gen_random_uuid(),
   user_id uuid,
@@ -39,6 +41,11 @@ create table if not exists meal_record (
   eaten_at timestamp default now(),
   created_at timestamp default now()
 );
+
+alter table meal_record enable row level security;
+
+create index if not exists meal_record_user_eaten_at_idx
+on meal_record (user_id, eaten_at desc);
 
 create table if not exists weekly_report (
   id uuid primary key default gen_random_uuid(),
@@ -56,3 +63,18 @@ create table if not exists weekly_report (
   created_at timestamp default now(),
   unique(user_id, week_start)
 );
+
+alter table weekly_report enable row level security;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'meal-images',
+  'meal-images',
+  false,
+  1500000,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update
+set
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;

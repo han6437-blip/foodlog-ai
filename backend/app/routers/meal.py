@@ -2,10 +2,11 @@ from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
+import httpx
 from app.schemas.models import FollowUpRequest, FollowUpResponse, MealCreateResponse, MealRecord, UserProfile
 from app.services.ai import analyze_meal, answer_follow_up
-from app.services.store import UPLOAD_DIR, read_db, write_db, ensure_store
+from app.services.store import load_image, read_db, save_image, write_db
 
 router = APIRouter(prefix="/api/meal", tags=["meal"])
 
@@ -19,15 +20,16 @@ async def create_and_analyze_meal(
 ):
     if image.content_type not in {"image/jpeg", "image/png", "image/webp"}:
         raise HTTPException(status_code=400, detail="图片格式不支持，请上传 JPG、PNG 或 WebP")
-    ensure_store()
     ext = Path(image.filename or "meal.jpg").suffix or ".jpg"
     record_id = str(uuid4())
     filename = f"{record_id}{ext}"
-    path = UPLOAD_DIR / filename
     content = await image.read()
     if len(content) > 1_500_000:
         raise HTTPException(status_code=400, detail="图片过大，请压缩后重试")
-    path.write_bytes(content)
+    try:
+        image_url = save_image(filename, content, image.content_type)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="图片上传到 Supabase Storage 失败") from exc
 
     data = read_db()
     profile = UserProfile(**data["profile"]) if data.get("profile") else None
@@ -36,7 +38,7 @@ async def create_and_analyze_meal(
         id=record_id,
         meal_type=meal_type,
         eaten_at=datetime.fromisoformat(eaten_at),
-        image_url=f"/api/meal/image/{filename}",
+        image_url=image_url,
         description=description,
         status="已分析",
         analysis=analysis,
@@ -73,7 +75,8 @@ def follow_up(meal_id: str, payload: FollowUpRequest) -> FollowUpResponse:
 
 @router.get("/image/{filename}")
 def image(filename: str):
-    path = UPLOAD_DIR / filename
-    if not path.exists():
+    try:
+        content, content_type = load_image(filename)
+    except (FileNotFoundError, httpx.HTTPStatusError) as exc:
         raise HTTPException(status_code=404, detail="图片不存在")
-    return FileResponse(path)
+    return Response(content=content, media_type=content_type)

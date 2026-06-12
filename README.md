@@ -77,8 +77,10 @@ select vault.create_secret('gpt-4o-mini', 'VISION_MODEL_NAME');
 ```env
 SUPABASE_URL=你的 Supabase Project URL
 SUPABASE_SERVICE_ROLE_KEY=你的 Supabase service_role key
+SUPABASE_STORAGE_BUCKET=meal-images
+APP_USER_ID=00000000-0000-0000-0000-000000000001
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` 只放在 Render 后端环境变量里，不要放到前端 Cloudflare Pages。
 
-后续生产化建议继续把 `backend/app/services/store.py` 替换为 Supabase Postgres/Storage 实现。
+后端会优先使用 Supabase Postgres 保存结构化数据，并使用 Supabase Storage 的 `meal-images` bucket 保存图片。未配置 Supabase 时才回退到本地 JSON 和本地文件，方便开发调试。

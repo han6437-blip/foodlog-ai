@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import meal, recommend, report, user
-from app.services.store import ensure_store
+from app.services.store import ensure_store, supabase_enabled
 
 app = FastAPI(title="Healthy Food MVP API", version="1.0.0")
 
@@ -22,4 +22,4 @@ app.include_router(report.router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "data_source": "supabase" if supabase_enabled() else "local"}
