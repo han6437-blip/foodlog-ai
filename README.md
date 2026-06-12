@@ -102,3 +102,23 @@ ALLOWED_ORIGINS=https://你的-cloudflare-pages域名.pages.dev
 ```
 
 同时建议在 Cloudflare Zero Trust Access 中给 Pages 域名添加邮箱登录保护，只允许个人邮箱访问。
+
+## 登录账号
+
+项目没有注册页面，只有 Supabase `app_user` 表里存在且启用的账号可以登录。
+
+先生成密码哈希：
+
+```powershell
+cd backend
+python scripts/hash_password.py
+```
+
+把输出的哈希复制下来，然后在 Supabase SQL Editor 执行：
+
+```sql
+insert into app_user (email, password_hash, is_active)
+values ('你的邮箱', '上一步生成的 password_hash', true);
+```
+
+之后访问前端页面时会先显示登录页。业务 API、图片读取、推荐、周报都需要登录 token。

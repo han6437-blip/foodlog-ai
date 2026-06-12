@@ -1,5 +1,30 @@
 <template>
-  <div class="shell">
+  <div v-if="!isAuthenticated" class="login-screen">
+    <section class="login-panel">
+      <div class="brand login-brand">
+        <div class="brand-mark">食</div>
+        <div>
+          <h1>健康饮食记录</h1>
+          <p>仅限授权账号</p>
+        </div>
+      </div>
+      <label>
+        邮箱
+        <input v-model="loginForm.email" type="email" autocomplete="email" />
+      </label>
+      <label>
+        密码
+        <input v-model="loginForm.password" type="password" autocomplete="current-password" @keyup.enter="login" />
+      </label>
+      <button :disabled="loggingIn" @click="login">
+        <LoaderCircle v-if="loggingIn" class="spin" :size="18" />
+        <span>{{ loggingIn ? "登录中" : "登录" }}</span>
+      </button>
+      <p v-if="notice" class="notice inline">{{ notice }}</p>
+    </section>
+  </div>
+
+  <div v-else class="shell">
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">食</div>
@@ -14,6 +39,7 @@
           <span>{{ item.label }}</span>
         </button>
       </nav>
+      <button class="logout" @click="logout">退出登录</button>
     </aside>
 
     <main>
@@ -226,7 +252,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 import { BarChart3, ClipboardList, History, LoaderCircle, MessageSquare, RefreshCw, Send, Settings, Sparkles, Trash2, UploadCloud } from "lucide-vue-next";
-import { api, imageUrl, type Meal, type Profile, type Recommendation, type WeeklyReport } from "./api";
+import { api, clearToken, getToken, imageUrl, setToken, type Meal, type Profile, type Recommendation, type WeeklyReport } from "./api";
 import { compressImage } from "./image";
 
 const tabs = [
@@ -240,6 +266,9 @@ const tabs = [
 
 const tab = ref<(typeof tabs)[number]["key"]>("profile");
 const notice = ref("");
+const isAuthenticated = ref(Boolean(getToken()));
+const loggingIn = ref(false);
+const loginForm = reactive({ email: "", password: "" });
 const profileSaved = ref(false);
 const profile = reactive<Profile>({
   goal: "健康饮食",
@@ -279,6 +308,30 @@ function splitList(value: string) {
 function show(message: string) {
   notice.value = message;
   window.setTimeout(() => (notice.value = ""), 3200);
+}
+
+async function login() {
+  if (!loginForm.email || !loginForm.password) {
+    show("请输入邮箱和密码");
+    return;
+  }
+  loggingIn.value = true;
+  try {
+    const result = await api.login(loginForm.email, loginForm.password);
+    setToken(result.access_token);
+    isAuthenticated.value = true;
+    await bootstrap();
+    show("登录成功");
+  } catch (error) {
+    show((error as Error).message);
+  } finally {
+    loggingIn.value = false;
+  }
+}
+
+function logout() {
+  clearToken();
+  isAuthenticated.value = false;
 }
 
 async function saveProfile() {
@@ -381,7 +434,7 @@ function formatTime(value: string) {
   return new Date(value).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
-onMounted(async () => {
+async function bootstrap() {
   try {
     const saved = await api.getProfile();
     if (saved) {
@@ -394,7 +447,13 @@ onMounted(async () => {
     }
     await Promise.all([loadHistory(), loadRecommendation(), api.weekly().then((data) => (weekly.value = data)).catch(() => null)]);
   } catch {
-    show("后端暂不可用，请确认 FastAPI 已启动。");
+    show("登录状态无效或后端暂不可用。");
+  }
+}
+
+onMounted(async () => {
+  if (isAuthenticated.value) {
+    await bootstrap();
   }
 });
 </script>

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import meal, recommend, report, user
+from app.routers import auth, meal, recommend, report, user
 from app.services.security import allowed_origins
 from app.services.store import ensure_store, supabase_enabled
 
@@ -15,6 +15,7 @@ app.add_middleware(
 )
 
 ensure_store()
+app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(meal.router)
 app.include_router(recommend.router)

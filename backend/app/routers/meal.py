@@ -6,6 +6,7 @@ from fastapi.responses import Response
 import httpx
 from app.schemas.models import FollowUpRequest, FollowUpResponse, MealCreateResponse, MealRecord, UserProfile
 from app.services.ai import analyze_meal, answer_follow_up
+from app.services.auth import require_auth
 from app.services.security import rate_limit
 from app.services.store import load_image, read_db, save_image, write_db
 
@@ -15,7 +16,10 @@ router = APIRouter(prefix="/api/meal", tags=["meal"])
 @router.post(
     "/analyze",
     response_model=MealCreateResponse,
-    dependencies=[Depends(rate_limit(limit=6, window_seconds=3600, name="meal_analyze"))],
+    dependencies=[
+        Depends(require_auth),
+        Depends(rate_limit(limit=6, window_seconds=3600, name="meal_analyze")),
+    ],
 )
 async def create_and_analyze_meal(
     image: UploadFile = File(...),
@@ -53,14 +57,14 @@ async def create_and_analyze_meal(
     return MealCreateResponse(record=record)
 
 
-@router.get("/history")
+@router.get("/history", dependencies=[Depends(require_auth)])
 def history() -> list[MealRecord]:
     data = read_db()
     records = [MealRecord(**meal) for meal in data["meals"]]
     return sorted(records, key=lambda item: item.eaten_at, reverse=True)[:50]
 
 
-@router.get("/{meal_id}")
+@router.get("/{meal_id}", dependencies=[Depends(require_auth)])
 def get_meal(meal_id: str) -> MealRecord:
     for meal in read_db()["meals"]:
         if meal["id"] == meal_id:
@@ -71,7 +75,10 @@ def get_meal(meal_id: str) -> MealRecord:
 @router.post(
     "/{meal_id}/follow-up",
     response_model=FollowUpResponse,
-    dependencies=[Depends(rate_limit(limit=30, window_seconds=3600, name="meal_follow_up"))],
+    dependencies=[
+        Depends(require_auth),
+        Depends(rate_limit(limit=30, window_seconds=3600, name="meal_follow_up")),
+    ],
 )
 def follow_up(meal_id: str, payload: FollowUpRequest) -> FollowUpResponse:
     data = read_db()
@@ -82,7 +89,7 @@ def follow_up(meal_id: str, payload: FollowUpRequest) -> FollowUpResponse:
     return FollowUpResponse(answer=answer_follow_up(payload.question, meal, profile))
 
 
-@router.get("/image/{filename}")
+@router.get("/image/{filename}", dependencies=[Depends(require_auth)])
 def image(filename: str):
     try:
         content, content_type = load_image(filename)

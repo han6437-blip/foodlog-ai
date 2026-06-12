@@ -33,6 +33,26 @@ button.ghost {
   grid-template-columns: 260px 1fr;
   min-height: 100vh;
 }
+.login-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #173629;
+}
+.login-panel {
+  width: min(420px, 100%);
+  background: #fffdf9;
+  border-radius: 8px;
+  padding: 28px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .22);
+}
+.login-brand {
+  color: #173629;
+  margin-bottom: 24px;
+}
+.login-brand p { color: #61756b; }
+.login-panel button { width: 100%; }
 .sidebar {
   background: #173629;
   color: #fff;
@@ -65,6 +85,12 @@ nav button {
   color: #d9e8df;
 }
 nav button.active { background: #285a45; color: #fff; }
+.logout {
+  width: 100%;
+  margin-top: 18px;
+  background: #315746;
+  color: #fff;
+}
 main {
   padding: 28px;
   max-width: 1120px;

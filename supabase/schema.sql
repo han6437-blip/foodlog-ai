@@ -12,6 +12,16 @@ as $$
   limit 1;
 $$;
 
+create table if not exists app_user (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  password_hash text not null,
+  is_active boolean not null default true,
+  created_at timestamp default now()
+);
+
+alter table app_user enable row level security;
+
 create table if not exists user_profile (
   user_id uuid primary key default gen_random_uuid(),
   nickname text,

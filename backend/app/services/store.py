@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from threading import Lock
 from typing import Any
+from contextvars import ContextVar
 
 import httpx
 
@@ -15,6 +16,7 @@ UPLOAD_DIR = DATA_DIR / "uploads"
 _LOCK = Lock()
 DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"
 DEFAULT_BUCKET = "meal-images"
+_CURRENT_USER_ID: ContextVar[str | None] = ContextVar("current_user_id", default=None)
 
 
 def ensure_store() -> None:
@@ -44,7 +46,11 @@ def _service_key() -> str:
 
 
 def _user_id() -> str:
-    return _env("APP_USER_ID", DEFAULT_USER_ID)
+    return _CURRENT_USER_ID.get() or _env("APP_USER_ID", DEFAULT_USER_ID)
+
+
+def set_current_user_id(user_id: str) -> None:
+    _CURRENT_USER_ID.set(user_id)
 
 
 def _bucket() -> str:
@@ -70,6 +76,23 @@ def _request(method: str, path: str, **kwargs: Any) -> httpx.Response:
     response = httpx.request(method, f"{_supabase_url()}{path}", timeout=20, **kwargs)
     response.raise_for_status()
     return response
+
+
+def find_user_by_email(email: str) -> dict[str, Any] | None:
+    normalized = email.strip().lower()
+    if not normalized:
+        return None
+    if supabase_enabled():
+        rows = _request(
+            "GET",
+            f"/rest/v1/app_user?email=eq.{normalized}&select=*&limit=1",
+            headers=_headers(),
+        ).json()
+        return rows[0] if rows else None
+
+    data = read_db()
+    users = data.get("app_users") or []
+    return next((user for user in users if user.get("email") == normalized), None)
 
 
 def _analysis_from_row(row: dict[str, Any]) -> dict[str, Any] | None:

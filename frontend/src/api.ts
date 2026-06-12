@@ -1,7 +1,23 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+const TOKEN_KEY = "foodlog_access_token";
+
+export function getToken() {
+  return window.localStorage.getItem(TOKEN_KEY) || "";
+}
+
+export function setToken(token: string) {
+  window.localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken() {
+  window.localStorage.removeItem(TOKEN_KEY);
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, init);
+  const headers = new Headers(init?.headers);
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.detail || "请求失败，请稍后重试");
@@ -60,6 +76,13 @@ export type WeeklyReport = {
 };
 
 export const api = {
+  login: (email: string, password: string) =>
+    request<{ access_token: string; email: string }>("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    }),
+  me: () => request<{ email: string; user_id: string }>("/api/auth/me"),
   getProfile: () => request<Profile | null>("/api/user/profile"),
   saveProfile: (profile: Profile) =>
     request<Profile>("/api/user/profile", {
@@ -87,5 +110,7 @@ export const api = {
 };
 
 export function imageUrl(path: string) {
-  return `${API_BASE}${path}`;
+  const token = getToken();
+  const separator = path.includes("?") ? "&" : "?";
+  return `${API_BASE}${path}${token ? `${separator}access_token=${encodeURIComponent(token)}` : ""}`;
 }

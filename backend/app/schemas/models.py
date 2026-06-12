@@ -50,6 +50,16 @@ class FollowUpResponse(BaseModel):
     answer: str
 
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    email: str
+
+
 class RecommendationRequest(BaseModel):
     temporary_conditions: str = ""
 
