@@ -91,6 +91,7 @@ ALLOWED_ORIGINS=https://你的-cloudflare-pages域名.pages.dev
 后端已内置基础限流：
 
 - 上传并分析饮食图片：每 IP 每小时 6 次
+- 登录尝试：每 IP 每小时 10 次
 - 本餐追问：每 IP 每小时 30 次
 - 下一餐推荐：每 IP 每小时 20-30 次
 - 周报生成：每 IP 每小时 5 次
