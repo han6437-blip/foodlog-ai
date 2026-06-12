@@ -79,8 +79,26 @@ SUPABASE_URL=你的 Supabase Project URL
 SUPABASE_SERVICE_ROLE_KEY=你的 Supabase service_role key
 SUPABASE_STORAGE_BUCKET=meal-images
 APP_USER_ID=00000000-0000-0000-0000-000000000001
+ALLOWED_ORIGINS=https://你的-cloudflare-pages域名.pages.dev
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` 只放在 Render 后端环境变量里，不要放到前端 Cloudflare Pages。
 
 后端会优先使用 Supabase Postgres 保存结构化数据，并使用 Supabase Storage 的 `meal-images` bucket 保存图片。未配置 Supabase 时才回退到本地 JSON 和本地文件，方便开发调试。
+
+## 防刷保护
+
+后端已内置基础限流：
+
+- 上传并分析饮食图片：每 IP 每小时 6 次
+- 本餐追问：每 IP 每小时 30 次
+- 下一餐推荐：每 IP 每小时 20-30 次
+- 周报生成：每 IP 每小时 5 次
+
+Render 环境变量建议配置：
+
+```env
+ALLOWED_ORIGINS=https://你的-cloudflare-pages域名.pages.dev
+```
+
+同时建议在 Cloudflare Zero Trust Access 中给 Pages 域名添加邮箱登录保护，只允许个人邮箱访问。

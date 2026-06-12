@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.models import WeeklyReport
 from app.services.ai import generate_weekly_report
+from app.services.security import rate_limit
 from app.services.store import read_db, write_db
 
 router = APIRouter(prefix="/api/report", tags=["report"])
@@ -12,7 +13,11 @@ def get_weekly_report():
     return WeeklyReport(**report) if report else None
 
 
-@router.post("/weekly-generate", response_model=WeeklyReport)
+@router.post(
+    "/weekly-generate",
+    response_model=WeeklyReport,
+    dependencies=[Depends(rate_limit(limit=5, window_seconds=3600, name="weekly_generate"))],
+)
 def generate_report() -> WeeklyReport:
     report = generate_weekly_report()
     if not report:
